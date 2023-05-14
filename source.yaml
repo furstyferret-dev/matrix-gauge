@@ -1,0 +1,98 @@
+esphome:
+  name: matrix-gauge
+  friendly_name: Battery Gauge
+
+esp8266:
+  board: esp01_1m
+
+# Enable logging
+logger: 
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret encryption_key
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Matrix-Gauge Fallback Hotspot"
+    password: "AmRbv7opqqiu"
+
+captive_portal:
+
+sensor:
+  - platform: homeassistant
+    id: soc
+    entity_id: sensor.battery_soc_corrected
+    internal: true
+  
+  - platform: homeassistant
+    id: bat_charge_power
+    entity_id: sensor.battery_charge
+    internal: true 
+
+number:
+  - platform: template
+    name: Intensity
+    id: intensity
+    icon: "mdi:brightness-6"
+    min_value: 0
+    max_value: 15
+    step: 1
+    initial_value: 12
+    set_action:
+      lambda: |-
+        id(matrix).intensity(x);
+
+# Example configuration entry
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO13
+
+interval:
+  - interval: 1s
+    then: 
+      - lambda: |
+            ESP_LOGI("log", "%f", id(soc).state);
+            
+
+display:
+  - platform: max7219digit
+    id: matrix
+    cs_pin: GPIO15
+    reverse_enable: false
+    update_interval: 500ms
+    num_chips: 4
+    intensity: 12
+    lambda: |-
+      static bool blink = false;
+      it.scroll(false);
+
+      it.filled_rectangle(2, 0, it.get_width(), it.get_height(), COLOR_ON);
+      it.rectangle(3, 1, it.get_width() - 4, it.get_height() - 2, COLOR_OFF);
+      it.rectangle(0, 2, 3, 4, COLOR_ON);
+      // it.draw_pixel_at(2, 3, COLOR_OFF);
+      // it.draw_pixel_at(2, 4, COLOR_OFF);
+
+      if (isnan(id(soc).raw_state)) 
+      {
+        it.filled_rectangle(3, 1, (it.get_width() - 4), 6, COLOR_OFF);
+      } else {
+        it.filled_rectangle(4, 2, (it.get_width() - 6) * (1 - id(soc).state / 100), 4, COLOR_OFF);
+        if (id(bat_charge_power).state > 0.1)
+          it.filled_rectangle((it.get_width() - 6) * (1 - id(soc).state / 100) + 3, 2, 2, 4, blink ? COLOR_OFF : COLOR_ON);
+        blink = !blink;
+      }
+  
+
+      
+      
+
