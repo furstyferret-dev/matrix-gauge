@@ -1,6 +1,8 @@
 # matrix-gauge
 A simple display of any battery level availabe to Home Assistant using a cheap 32x8 LED matrix.
 
+
+
 ## Required equipment:
 - Home Assistant instance with some kind of battery connected.
 - MAX7219 LED matrix
